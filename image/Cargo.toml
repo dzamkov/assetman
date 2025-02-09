@@ -1,0 +1,9 @@
+[package]
+name = "assetman-image"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+assetman = { path = "../core" }
+uial = { git = "https://github.com/dzamkov/uial" }
+image = "0.25.5"

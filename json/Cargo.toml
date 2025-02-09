@@ -1,0 +1,9 @@
+[package]
+name = "assetman-json"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+assetman = { path = "../core" }
+serdere = { git = "https://github.com/dzamkov/serdere" }
+serdere-json = { git = "https://github.com/dzamkov/serdere" }

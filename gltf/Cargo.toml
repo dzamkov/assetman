@@ -1,0 +1,13 @@
+[package]
+name = "assetman-gltf"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+assetman = { path = "../core" }
+assetman-json = { path = "../json" }
+assetman-image = { path = "../image" }
+serdere = { git = "https://github.com/dzamkov/serdere" }
+serdere-json = { git = "https://github.com/dzamkov/serdere" }
+bytemuck = "1.21.0"
+thiserror = "2.0.11"
