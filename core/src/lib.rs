@@ -14,8 +14,23 @@ impl AssetPath {
         Self(String::new())
     }
 
+    /// Gets an absolute [`AssetPath`] based on the given string.
+    pub fn absolute(path: &'static str) -> Self {
+        // TODO: Come up with alternate representation of `AssetPath` that doesn't require
+        // allocation here.
+        Self(path.to_owned())
+    }
+
     /// Gets the [`AssetPath`] for the directory this asset is in, or [`None`] if this is the root
     /// directory.
+    /// 
+    /// # Examples
+    /// ```
+    /// # use assetman::AssetPath;
+    /// assert_eq!(AssetPath::absolute("foo/bar").parent(), Some(AssetPath::absolute("foo")));
+    /// assert_eq!(AssetPath::absolute("foo").parent(), Some(AssetPath::root()));
+    /// assert_eq!(AssetPath::root().parent(), None);
+    /// ```
     pub fn parent(&self) -> Option<Self> {
         let path = &self.0;
         if path.is_empty() {
@@ -32,6 +47,14 @@ impl AssetPath {
 
     /// Interpreting this [`AssetPath`] as a directory, constructs an [`AssetPath`] for an asset
     /// relative to it.
+    /// 
+    /// # Examples
+    /// ```
+    /// # use assetman::AssetPath;
+    /// assert_eq!(AssetPath::absolute("foo").relative("bar"), AssetPath::absolute("foo/bar"));
+    /// assert_eq!(AssetPath::absolute("foo").relative(".."), AssetPath::root());
+    /// assert_eq!(AssetPath::absolute("foo/bar").relative("~/baz"), AssetPath::absolute("baz"));
+    /// ```
     pub fn relative(&self, path: &str) -> Self {
         let mut res = self.0.clone();
         for part in path.split('/') {
@@ -59,18 +82,20 @@ impl AssetPath {
     }
 
     /// Gets the file extension of this asset, or [`None`] if not present.
+    /// 
+    /// # Examples
+    /// ```
+    /// # use assetman::AssetPath;
+    /// assert_eq!(AssetPath::absolute("foo/bar.png").extension(), Some("png"));
+    /// assert_eq!(AssetPath::absolute("foo/bar").extension(), None);
+    /// assert_eq!(AssetPath::root().extension(), None);
+    /// ```
     pub fn extension(&self) -> Option<&str> {
         if let Some(pos) = self.0.rfind('.') {
             Some(&self.0[pos + 1..])
         } else {
             None
         }
-    }
-}
-
-impl From<&str> for AssetPath {
-    fn from(value: &str) -> Self {
-        Self(value.to_owned())
     }
 }
 

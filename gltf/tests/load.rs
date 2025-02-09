@@ -1,13 +1,14 @@
+use assetman::{AssetLoader, AssetPath, AssetRoot};
 use assetman_gltf::AssetLoaderGltfExt;
 
 #[test]
 fn test_load_box() {
-    let root = assetman::AssetRoot::new(std::path::Path::new(concat!(
+    let root = AssetRoot::new(std::path::Path::new(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests"
     )));
-    let loader = assetman::AssetLoader::new(&root, None);
-    for bx in ["box.gltf", "box.glb"].map(|s| loader.load_gltf(&s.into())) {
+    let loader = AssetLoader::new(&root, None);
+    for bx in ["box.gltf", "box.glb"].map(|s| loader.load_gltf(&AssetPath::absolute(s))) {
         let gltf = bx.unwrap();
         let scene = gltf.scene().unwrap();
         let node = scene.nodes().next().unwrap();
