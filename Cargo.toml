@@ -4,5 +4,6 @@ members = [
 	"core",
 	"json",
 	"image",
-	"gltf"
+	"gltf",
+	"shader"
 ]
