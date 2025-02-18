@@ -5,5 +5,4 @@ edition = "2021"
 
 [dependencies]
 assetman = { path = "../core" }
-uial = { git = "https://github.com/dzamkov/uial" }
 image = "0.25"

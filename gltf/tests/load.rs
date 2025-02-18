@@ -24,3 +24,16 @@ fn test_load_box() {
         prim.material().unwrap();
     }
 }
+
+#[test]
+fn test_load_basket() {
+    let root = AssetRoot::new(std::path::Path::new(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests"
+    )));
+    let loader = AssetLoader::new(&root, None);
+    let basket = loader
+        .load_gltf(&AssetPath::absolute("basket.gltf"))
+        .unwrap();
+    basket.nodes_by_name("Camera").next().unwrap().camera().unwrap();
+}

@@ -109,6 +109,10 @@ pub struct GltfInfo {
     #[serde(default)]
     pub nodes: Vec<NodeInfo>,
 
+    /// The cameras defined in the GLTF file.
+    #[serde(default)]
+    pub cameras: Vec<CameraInfo>,
+
     /// The meshes defined in the GLTF file.
     #[serde(default)]
     pub meshes: Vec<MeshInfo>,
@@ -178,8 +182,73 @@ pub struct NodeInfo {
     #[serde(default)]
     pub children: Vec<NodeId>,
 
-    /// The mesh displayed by this node.
+    /// The camera referenced by this node.
+    pub camera: Option<CameraId>,
+
+    /// The mesh in this node.
     pub mesh: Option<MeshId>,
+}
+
+/// Identifies a camera in a GLTF file.
+pub type CameraId = u32;
+
+
+/// Describes a camera in a GLTF file.
+#[derive(Debug, Deserialize, Clone)]
+pub struct CameraInfo {
+    /// The name of the camera.
+    pub name: Option<String>,
+
+    /// Contains the type-specific information for this camera.
+    #[serde(flatten)]
+    pub ty_info: CameraTypeInfo,
+}
+
+/// Contains type-specific information for a camera.
+#[derive(Debug, Deserialize, Clone)]
+#[serde(tag = "type")]
+pub enum CameraTypeInfo {
+    #[serde(rename = "orthographic")]
+    Orthographic {
+        orthographic: CameraOrthographicInfo,
+    },
+    #[serde(rename = "perspective")]
+    Perspective {
+        perspective: CameraPerspectiveInfo,
+    },
+}
+
+/// Contains information for a perspective camera.
+#[derive(Debug, Deserialize, Clone)]
+pub struct CameraPerspectiveInfo {
+    /// The aspect ratio of the camera.
+    #[serde(rename = "aspectRatio")]
+    pub aspect_ratio: Option<f32>,
+
+    /// The vertical field of view of the camera, in radians.
+    pub yfov: f32,
+
+    /// The distance to the far clipping plane.
+    pub zfar: Option<f32>,
+
+    /// The distance to the near clipping plane.
+    pub znear: f32,
+}
+
+/// Contains information for an orthographic camera.
+#[derive(Debug, Deserialize, Clone)]
+pub struct CameraOrthographicInfo {
+    /// The horizontal magnification of the view.
+    pub xmag: f32,
+
+    /// The vertical magnification of the view.
+    pub ymag: f32,
+
+    /// The distance to the far clipping plane.
+    pub zfar: f32,
+
+    /// The distance to the near clipping plane.
+    pub znear: f32,
 }
 
 /// Identifies a mesh in a GLTF file.
@@ -571,7 +640,7 @@ impl Gltf<'_> {
     }
 
     /// Iterates over the nodes in this GLTF file that have the given name.
-    pub fn search_nodes_by_name<'a: 'b, 'b>(
+    pub fn nodes_by_name<'a: 'b, 'b>(
         &'a self,
         name: &'b str,
     ) -> impl Iterator<Item = Node<'a>> + 'b {
@@ -635,7 +704,7 @@ impl<'a> Node<'a> {
     }
 
     /// Gets the [`NodeInfo`] for this node.
-    pub fn info(&self) -> &NodeInfo {
+    pub fn info(&self) -> &'a NodeInfo {
         self.info
     }
 
@@ -680,7 +749,16 @@ impl<'a> Node<'a> {
         })
     }
 
-    /// Gets the mesh displayed by this node, if one exists.
+    /// Gets the camera for this node, if one exists.
+    pub fn camera(&self) -> Option<Camera<'a>> {
+        let gltf = self.gltf;
+        let id = self.info.camera?;
+        Some(Camera {
+            info: &gltf.info.cameras[id as usize],
+        })
+    }
+
+    /// Gets the mesh for this node, if one exists.
     pub fn mesh(&self) -> Option<Mesh<'a>> {
         let gltf = self.gltf;
         let id = self.info.mesh?;
@@ -691,7 +769,21 @@ impl<'a> Node<'a> {
     }
 }
 
+/// Represents a camera in a [`Gltf`].
+#[derive(Clone, Copy)]
+pub struct Camera<'a> {
+    info: &'a CameraInfo,
+}
+
+impl<'a> Camera<'a> {
+    /// Gets the [`CameraInfo`] for this camera.
+    pub fn info(&self) -> &'a CameraInfo {
+        self.info
+    }
+}
+
 /// Represents a mesh in a [`Gltf`].
+#[derive(Clone, Copy)]
 pub struct Mesh<'a> {
     gltf: &'a Gltf<'a>,
     info: &'a MeshInfo,
@@ -699,7 +791,7 @@ pub struct Mesh<'a> {
 
 impl<'a> Mesh<'a> {
     /// Gets the [`MeshInfo`] for this mesh.
-    pub fn info(&self) -> &MeshInfo {
+    pub fn info(&self) -> &'a MeshInfo {
         self.info
     }
 
@@ -714,6 +806,7 @@ impl<'a> Mesh<'a> {
 }
 
 /// Represents a primitive in a [`Mesh`].
+#[derive(Clone, Copy)]
 pub struct Primitive<'a> {
     gltf: &'a Gltf<'a>,
     info: &'a PrimitiveInfo,
@@ -721,7 +814,7 @@ pub struct Primitive<'a> {
 
 impl<'a> Primitive<'a> {
     /// Gets the [`PrimitiveInfo`] for this primitive.
-    pub fn info(&self) -> &PrimitiveInfo {
+    pub fn info(&self) -> &'a PrimitiveInfo {
         self.info
     }
 
@@ -763,6 +856,7 @@ impl<'a> Primitive<'a> {
 }
 
 /// Represents an accessor in a [`Gltf`] whose elements are logically of type `T`.
+#[derive(Clone, Copy)]
 pub struct Accessor<'a, T> {
     gltf: &'a Gltf<'a>,
     info: &'a AccessorInfo,
@@ -835,6 +929,7 @@ impl Element for [f32; 3] {
 }
 
 /// Represents a material in a [`Gltf`].
+#[derive(Clone, Copy)]
 pub struct Material<'a> {
     gltf: &'a Gltf<'a>,
     info: &'a MaterialInfo,
@@ -842,7 +937,7 @@ pub struct Material<'a> {
 
 impl<'a> Material<'a> {
     /// Gets the [`MaterialInfo`] for this material.
-    pub fn info(&self) -> &MaterialInfo {
+    pub fn info(&self) -> &'a MaterialInfo {
         self.info
     }
 
@@ -868,6 +963,7 @@ impl<'a> Material<'a> {
 }
 
 /// Represents a texture in a [`Gltf`].
+#[derive(Clone, Copy)]
 pub struct Texture<'a> {
     gltf: &'a Gltf<'a>,
     info: &'a TextureInfo,
@@ -875,7 +971,7 @@ pub struct Texture<'a> {
 
 impl<'a> Texture<'a> {
     /// Gets the [`TextureInfo`] for this texture.
-    pub fn info(&self) -> &TextureInfo {
+    pub fn info(&self) -> &'a TextureInfo {
         self.info
     }
 
@@ -894,6 +990,7 @@ impl<'a> Texture<'a> {
 }
 
 /// Represents an image in a [`Gltf`].
+#[derive(Clone, Copy)]
 pub struct Image<'a> {
     gltf: &'a Gltf<'a>,
     info: &'a ImageInfo,
