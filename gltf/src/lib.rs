@@ -192,7 +192,6 @@ pub struct NodeInfo {
 /// Identifies a camera in a GLTF file.
 pub type CameraId = u32;
 
-
 /// Describes a camera in a GLTF file.
 #[derive(Debug, Deserialize, Clone)]
 pub struct CameraInfo {
@@ -213,9 +212,7 @@ pub enum CameraTypeInfo {
         orthographic: CameraOrthographicInfo,
     },
     #[serde(rename = "perspective")]
-    Perspective {
-        perspective: CameraPerspectiveInfo,
-    },
+    Perspective { perspective: CameraPerspectiveInfo },
 }
 
 /// Contains information for a perspective camera.
@@ -1010,6 +1007,17 @@ impl Image<'_> {
             self.gltf
                 .assets
                 .size_image(&self.gltf.dir.relative(self.info.uri.as_ref().unwrap()))
+        }
+    }
+
+    /// Loads the data for this image.
+    pub fn load(&self) -> AssetLoadResult<DynamicImage> {
+        if let Some(buffer_view) = self.info.buffer_view {
+            todo!()
+        } else {
+            self.gltf
+                .assets
+                .load_image(&self.gltf.dir.relative(self.info.uri.as_ref().unwrap()))
         }
     }
 
