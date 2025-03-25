@@ -1,33 +1,33 @@
-use assetman::{AssetLoadError, AssetLoadResult, AssetLoader, AssetPath};
-use assetman_image::{AssetLoaderImageExt, DynamicImage};
-use assetman_json::AssetLoaderJsonExt;
+use assetman::{AssetLoadError, AssetLoadResult, AssetPath, Tracker};
+use assetman_image::{AssetPathImageExt, DynamicImage};
+use assetman_json::AssetPathJsonExt;
 use serdere::{Deserialize, Utf8Reader};
 use serdere_json::{JsonDeserializer, ValueExt};
 use std::cell::OnceCell;
 use std::io::{BufReader, Read};
 
-/// Contains GLTF-loading extensions for [`AssetLoader`].
-pub trait AssetLoaderGltfExt {
+/// Contains GLTF-loading extensions for [`AssetPath`].
+pub trait AssetPathGltfExt {
     /// Loads a GLTF or GLB file.
-    fn load_gltf(&self, asset: &AssetPath) -> AssetLoadResult<Gltf<'_>>;
+    fn load_gltf<'a>(&self, tracker: &'a Tracker) -> AssetLoadResult<Gltf<'a>>;
 }
 
-impl AssetLoaderGltfExt for AssetLoader<'_> {
-    fn load_gltf(&self, asset: &AssetPath) -> AssetLoadResult<Gltf<'_>> {
-        match asset.extension() {
-            None | Some("gltf") => self.load_json_with(asset, |value| {
+impl AssetPathGltfExt for AssetPath {
+    fn load_gltf<'a>(&self, tracker: &'a Tracker) -> AssetLoadResult<Gltf<'a>> {
+        match self.extension() {
+            None | Some("gltf") => self.load_json_with(tracker, |value| {
                 let info: GltfInfo = value.get()?;
                 let num_buffers = info.buffers.len();
                 Ok(Gltf {
-                    assets: self.clone(),
-                    dir: asset.parent().unwrap(),
+                    tracker,
+                    dir: self.parent().unwrap(),
                     info,
                     buffer_cache: (0..num_buffers).map(|_| OnceCell::new()).collect(),
                 })
             }),
             Some("glb") => {
-                let mut file = self.open_file(asset)?;
-                assetman::with_asset(asset, || {
+                let mut file = self.open_file(tracker)?;
+                assetman::with_asset(self, || {
                     let mut header = [0u8; 12];
                     let Ok(()) = file.read_exact(&mut header) else {
                         return Err(MalformedGlbError.into());
@@ -55,8 +55,8 @@ impl AssetLoaderGltfExt for AssetLoader<'_> {
                     )?;
                     let num_buffers = info.buffers.len();
                     let res = Gltf {
-                        assets: self.clone(),
-                        dir: asset.parent().unwrap(),
+                        tracker,
+                        dir: self.parent().unwrap(),
                         info,
                         buffer_cache: (0..num_buffers).map(|_| OnceCell::new()).collect(),
                     };
@@ -77,7 +77,7 @@ impl AssetLoaderGltfExt for AssetLoader<'_> {
                 })
             }
             _ => Err(AssetLoadError {
-                asset: asset.clone(),
+                asset: self.clone(),
                 inner: UnsupportedExtensionError.into(),
             }),
         }
@@ -550,10 +550,10 @@ pub struct ImageInfo {
 
 /// An instantiation of a GLTF or GLB file.
 ///
-/// Internally contains an [`AssetLoader`] which can be used to load referenced resources on
+/// This maintains a reference to a [`Tracker`] to allow tracking of referenced resources loaded on
 /// demand.
 pub struct Gltf<'a> {
-    assets: AssetLoader<'a>,
+    tracker: &'a Tracker,
     dir: AssetPath,
     info: GltfInfo,
     buffer_cache: Box<[OnceCell<Box<[u8]>>]>,
@@ -613,7 +613,7 @@ impl Gltf<'_> {
         let res = cache.get_or_init(|| {
             let buffer_info = &self.info.buffers[id as usize];
             let uri = buffer_info.uri.as_ref().expect("buffer has no URI");
-            match self.assets.load_bytes(&self.dir.relative(uri)) {
+            match self.dir.relative(uri).load_bytes(self.tracker) {
                 Ok(data) => data,
                 Err(e) => {
                     err = Some(e);
@@ -1005,8 +1005,9 @@ impl Image<'_> {
             todo!()
         } else {
             self.gltf
-                .assets
-                .size_image(&self.gltf.dir.relative(self.info.uri.as_ref().unwrap()))
+                .dir
+                .relative(self.info.uri.as_ref().unwrap())
+                .size_image(self.gltf.tracker)
         }
     }
 
@@ -1016,8 +1017,9 @@ impl Image<'_> {
             todo!()
         } else {
             self.gltf
-                .assets
-                .load_image(&self.gltf.dir.relative(self.info.uri.as_ref().unwrap()))
+                .dir
+                .relative(self.info.uri.as_ref().unwrap())
+                .load_image(self.gltf.tracker)
         }
     }
 
@@ -1032,16 +1034,16 @@ impl Image<'_> {
 }
 
 /// A portable reference to the source data for an [`Texture`].
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ImageSource {
     Asset(AssetPath),
 }
 
 impl ImageSource {
     /// Loads this image.
-    pub fn load(&self, assets: &AssetLoader) -> AssetLoadResult<DynamicImage> {
+    pub fn load(&self, tracker: &Tracker) -> AssetLoadResult<DynamicImage> {
         match self {
-            ImageSource::Asset(path) => assets.load_image(path),
+            ImageSource::Asset(path) => path.load_image(tracker),
         }
     }
 }

@@ -1,32 +1,33 @@
-use assetman::{AssetLoader, AssetPath, AssetRoot};
-use assetman_shader::AssetLoaderShaderExt;
+use assetman::{AssetPath, Tracker};
+use assetman_shader::AssetPathShaderExt;
 
 #[test]
 fn test_load_minimal() {
-    let root = AssetRoot::new(std::path::Path::new(concat!(
+    let root = AssetPath::new_root_fs(std::path::Path::new(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests"
     )));
-    let loader = AssetLoader::new(&root, None);
+    let tracker = Tracker::default();
     let (device, _) = pollster::block_on(get_device());
-    loader
-        .load_shader_wgpu(&AssetPath::absolute("minimal.wgsl"), &device)
+    root.relative("minimal.wgsl")
+        .load_shader_wgpu(&tracker, &device)
         .unwrap();
 }
 
 #[test]
 fn test_load_error() {
-    let root = AssetRoot::new(std::path::Path::new(concat!(
+    let root = AssetPath::new_root_fs(std::path::Path::new(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests"
     )));
-    let loader = AssetLoader::new(&root, None);
+    let tracker = Tracker::default();
     let (device, _) = pollster::block_on(get_device());
-    let err = loader
-        .load_shader_wgpu(&AssetPath::absolute("error.wgsl"), &device)
+    let err = root
+        .relative("error.wgsl")
+        .load_shader_wgpu(&tracker, &device)
         .err()
         .unwrap();
-    assert_eq!(err.asset, AssetPath::absolute("error.wgsl"));
+    assert_eq!(err.asset, root.relative("error.wgsl"));
 }
 
 /// Gets a [`wgpu::Device`] for testing.

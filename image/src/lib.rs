@@ -1,34 +1,34 @@
-use assetman::{AssetLoadResult, AssetLoader, AssetPath};
+use assetman::{AssetLoadResult, AssetPath, Tracker};
 use std::io::BufReader;
 
 pub use image::*;
 
-/// Contains image-loading extensions for [`AssetLoader`].
-pub trait AssetLoaderImageExt {
+/// Contains image-loading extensions for [`AssetPath`].
+pub trait AssetPathImageExt {
     /// Loads an image.
-    fn load_image(&self, asset: &AssetPath) -> AssetLoadResult<DynamicImage>;
+    fn load_image(&self, tracker: &Tracker) -> AssetLoadResult<DynamicImage>;
 
     /// Gets the size of an image at the given path.
-    fn size_image(&self, asset: &AssetPath) -> AssetLoadResult<[u32; 2]>;
+    fn size_image(&self, tracker: &Tracker) -> AssetLoadResult<[u32; 2]>;
 }
 
-impl AssetLoaderImageExt for AssetLoader<'_> {
-    fn load_image(&self, asset: &AssetPath) -> AssetLoadResult<DynamicImage> {
-        let file = self.open_file(asset)?;
+impl AssetPathImageExt for AssetPath {
+    fn load_image(&self, tracker: &Tracker) -> AssetLoadResult<DynamicImage> {
+        let file = self.open_file(tracker)?;
         let reader = BufReader::new(file);
-        assetman::with_asset(asset, || {
+        assetman::with_asset(self, || {
             Ok(load(
                 reader,
-                image_format_from_extension(asset.extension())?,
+                image_format_from_extension(self.extension())?,
             )?)
         })
     }
 
-    fn size_image(&self, asset: &AssetPath) -> AssetLoadResult<[u32; 2]> {
-        let file = self.open_file(asset)?;
+    fn size_image(&self, tracker: &Tracker) -> AssetLoadResult<[u32; 2]> {
+        let file = self.open_file(tracker)?;
         let reader = BufReader::new(file);
-        assetman::with_asset(asset, || {
-            let format = image_format_from_extension(asset.extension())?;
+        assetman::with_asset(self, || {
+            let format = image_format_from_extension(self.extension())?;
             let (width, height) = match format {
                 ImageFormat::Png => codecs::png::PngDecoder::new(reader)?.dimensions(),
                 _ => todo!(),

@@ -1,14 +1,14 @@
-use assetman::{AssetLoader, AssetPath, AssetRoot};
-use assetman_gltf::AssetLoaderGltfExt;
+use assetman::{AssetPath, Tracker};
+use assetman_gltf::AssetPathGltfExt;
 
 #[test]
 fn test_load_box() {
-    let root = AssetRoot::new(std::path::Path::new(concat!(
+    let root = AssetPath::new_root_fs(std::path::Path::new(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests"
     )));
-    let loader = AssetLoader::new(&root, None);
-    for bx in ["box.gltf", "box.glb"].map(|s| loader.load_gltf(&AssetPath::absolute(s))) {
+    let tracker = Tracker::default();
+    for bx in ["box.gltf", "box.glb"].map(|s| root.relative(s).load_gltf(&tracker)) {
         let gltf = bx.unwrap();
         let scene = gltf.scene().unwrap();
         let node = scene.nodes().next().unwrap();
@@ -27,13 +27,16 @@ fn test_load_box() {
 
 #[test]
 fn test_load_basket() {
-    let root = AssetRoot::new(std::path::Path::new(concat!(
+    let root = AssetPath::new_root_fs(std::path::Path::new(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests"
     )));
-    let loader = AssetLoader::new(&root, None);
-    let basket = loader
-        .load_gltf(&AssetPath::absolute("basket.gltf"))
+    let tracker = Tracker::default();
+    let basket = root.relative("basket.gltf").load_gltf(&tracker).unwrap();
+    basket
+        .nodes_by_name("Camera")
+        .next()
+        .unwrap()
+        .camera()
         .unwrap();
-    basket.nodes_by_name("Camera").next().unwrap().camera().unwrap();
 }

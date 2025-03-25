@@ -1,24 +1,24 @@
-use assetman::{AssetLoadResult, AssetLoader, AssetPath};
+use assetman::{AssetLoadResult, AssetPath, Tracker};
 use std::borrow::Cow;
 
-/// Contains shader-related extensions for [`AssetLoader`].
-pub trait AssetLoaderShaderExt {
+/// Contains shader-related extensions for [`AssetPath`].
+pub trait AssetPathShaderExt {
     /// Loads and compiles a shader.
     fn load_shader_wgpu(
         &self,
-        asset: &AssetPath,
+        tracker: &Tracker,
         device: &wgpu::Device,
     ) -> AssetLoadResult<wgpu::ShaderModule>;
 }
 
-impl AssetLoaderShaderExt for AssetLoader<'_> {
+impl AssetPathShaderExt for AssetPath {
     fn load_shader_wgpu(
         &self,
-        asset: &AssetPath,
+        tracker: &Tracker,
         device: &wgpu::Device,
     ) -> AssetLoadResult<wgpu::ShaderModule> {
-        let mut file = self.open_file(asset)?;
-        assetman::with_asset(asset, || {
+        let mut file = self.open_file(tracker)?;
+        assetman::with_asset(self, || {
             let mut source = String::new();
             std::io::Read::read_to_string(&mut file, &mut source)?;
             device.push_error_scope(wgpu::ErrorFilter::Validation);
