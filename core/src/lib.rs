@@ -22,6 +22,13 @@ impl PartialEq for AssetPath {
 
 impl Eq for AssetPath {}
 
+impl std::hash::Hash for AssetPath {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self.root.as_ref(), state);
+        self.inner.hash(state);
+    }
+}
+
 impl std::fmt::Debug for AssetPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AssetPath")
