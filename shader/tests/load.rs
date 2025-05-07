@@ -38,7 +38,7 @@ async fn get_device() -> (wgpu::Device, wgpu::Queue) {
         .await
         .unwrap();
     adapter
-        .request_device(&wgpu::DeviceDescriptor::default(), None)
+        .request_device(&wgpu::DeviceDescriptor::default())
         .await
         .unwrap()
 }
