@@ -140,6 +140,25 @@ impl AssetRoot {
         Ok(file)
     }
 
+    /// Ensures that the given [`Tracker`] is notified when the file at the given relative path
+    /// is modified.
+    pub fn track_file(
+        &self,
+        tracker: &Tracker,
+        relative_path: &std::path::Path,
+    ) {
+        let full_path = self.path.join(relative_path);
+        if let Some(watcher) = &self.watcher {
+            use std::collections::hash_map::Entry::*;
+            let mut paths = watcher.paths.lock().unwrap();
+            let token = match paths.entry(full_path) {
+                Occupied(entry) => entry.get().token(),
+                Vacant(entry) => entry.insert(renege::Condition::new()).token(),
+            };
+            tracker.set(tracker.get() & token);
+        };
+    }
+
     /// Gets the names of the immediate children of a given directory in the asset root directory.
     pub fn get_children(
         &self,
@@ -284,6 +303,11 @@ impl AssetPath {
                 inner: err.into(),
             }),
         }
+    }
+
+    /// Ensures that the given [`Tracker`] is notified when this asset is modified.
+    pub fn track(&self, tracker: &Tracker) {
+        self.root.track_file(tracker, std::path::Path::new(&*self.inner.0));
     }
 
     /// Gets the names of the immediate children of the given asset directory.
